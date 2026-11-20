@@ -473,3 +473,23 @@ class BanqueTournois:
 
         self.sauvegarder()
 
+        # Recuperer les anciens tournois d'un joueur
+    def historique_joueur(self, id_joueur):
+        historique = []
+
+        # Parcourir les tournois enregistres
+        for tournoi in self.tournois:
+
+            # Garder les tournois termines du joueur
+            if id_joueur in tournoi["participants"] and not tournoi["enCours"]:
+
+                stats = self.statistiques(tournoi)
+
+                historique.append({
+                    "nom": tournoi["nom"],
+                    "points": stats[id_joueur]["points"],
+                    "victoires": stats[id_joueur]["v"],
+                    "defaites": stats[id_joueur]["d"]
+                })
+
+        return historique

@@ -5,6 +5,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from accueil import Accueil
 
 
+
 # PAGE POUR RECHERCHER LES TOURNOIS EXISTANTS
 class Page_Rechercher_Tournoi(ctk.CTkFrame):
 
@@ -176,6 +177,7 @@ class Page_Gerer_Tournoi(ctk.CTkFrame):
         onglets.add("Matchs")
         onglets.add("Classement")
         onglets.add("Graphique")
+        onglets.add("Historique")
 
         # ONGLET MATCHS
         zone = ctk.CTkScrollableFrame(
@@ -341,6 +343,138 @@ class Page_Gerer_Tournoi(ctk.CTkFrame):
 
         plt.close(figure)
 
+        # ONGLET HISTORIQUE DES TOURNOIS
+        zone_historique = onglets.tab("Historique")
+
+        # Recuperer seulement les tournois termines
+        tournois_termines = {
+            t["nom"]: t
+            for t in banque.tournois
+            if not t["enCours"]
+        }
+
+        if not tournois_termines:
+            ctk.CTkLabel(
+                zone_historique,
+                text="Aucun tournoi termine."
+            ).pack(pady=20)
+
+        else:
+            # Zone pour choisir le tournoi et la ronde
+            ligne_choix = ctk.CTkFrame(zone_historique)
+            ligne_choix.pack(pady=8)
+
+            ctk.CTkLabel(
+                ligne_choix,
+                text="Tournoi :"
+            ).pack(side="left", padx=5)
+
+            choix_tournoi = ctk.CTkComboBox(
+                ligne_choix,
+                values=list(tournois_termines.keys()),
+                width=190,
+                state="readonly"
+            )
+            choix_tournoi.pack(side="left", padx=5)
+
+            ctk.CTkLabel(
+                ligne_choix,
+                text="Ronde :"
+            ).pack(side="left", padx=5)
+
+            choix_ronde = ctk.CTkComboBox(
+                ligne_choix,
+                values=["Ronde 1"],
+                width=110,
+                state="readonly"
+            )
+            choix_ronde.pack(side="left", padx=5)
+
+            # Zone pour afficher les anciens matchs
+            liste_matchs = ctk.CTkScrollableFrame(
+                zone_historique
+            )
+            liste_matchs.pack(
+                fill="both",
+                expand=True,
+                padx=10,
+                pady=5
+            )
+
+            # Afficher les scores de la ronde choisie
+            def afficher_matchs(choix=None):
+
+                for widget in liste_matchs.winfo_children():
+                    widget.destroy()
+
+                archive = tournois_termines[choix_tournoi.get()]
+
+                if not archive["rondes"]:
+                    ctk.CTkLabel(
+                        liste_matchs,
+                        text="Aucune ronde enregistree."
+                    ).pack()
+                    return
+
+                numero = int(choix_ronde.get().split()[-1]) - 1
+                ronde = archive["rondes"][numero]
+
+                for match in ronde:
+
+                    joueur1 = self.nom_joueur(match["a"])
+
+                    if match["b"] is None:
+                        texte = f"{joueur1} - REPOS"
+
+                    else:
+                        joueur2 = self.nom_joueur(match["b"])
+
+                        score1 = match["points_a"]
+                        score2 = match["points_b"]
+
+                        if score1 is None:
+                            score1 = "?"
+
+                        if score2 is None:
+                            score2 = "?"
+
+                        texte = (
+                            f"{joueur1}  {score1} - "
+                            f"{score2}  {joueur2}"
+                        )
+
+                    ctk.CTkLabel(
+                        liste_matchs,
+                        text=texte
+                    ).pack(pady=5)
+
+            # Actualiser les rondes selon le tournoi choisi
+            def changer_tournoi(choix=None):
+
+                archive = tournois_termines[choix_tournoi.get()]
+
+                rondes = [
+                    f"Ronde {i}"
+                    for i in range(1, len(archive["rondes"]) + 1)
+                ]
+
+                choix_ronde.configure(
+                    values=rondes or ["Aucune ronde"]
+                )
+
+                choix_ronde.set(
+                    rondes[0] if rondes else "Aucune ronde"
+                )
+
+                afficher_matchs()
+
+            # Actualiser automatiquement les choix
+            choix_tournoi.configure(command=changer_tournoi)
+            choix_ronde.configure(command=afficher_matchs)
+
+            choix_tournoi.set(next(iter(tournois_termines)))
+            changer_tournoi()
+
         # BOUTONS DE NAVIGATION
         boutons = ctk.CTkFrame(
             self,
@@ -475,6 +609,7 @@ class Page_Gerer_Tournoi(ctk.CTkFrame):
 
 
                 self.tournoi["enCours"] = False
+                banque.sauvegarder()
 
     
 
